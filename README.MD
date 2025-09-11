@@ -30,8 +30,8 @@ Users can register either as **Clients** (looking for services) or as **Freelanc
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/coderr-frontend.git
-   git clone https://github.com/your-username/coderr-backend.git
+   git clone https://github.com/VincenzoRispoli/coderr-frontend.git
+   git clone https://github.com/VincenzoRispoli/coderr-backend.git
 
    cd coderr-frontend
    cd coderr-backend
