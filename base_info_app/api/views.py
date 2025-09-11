@@ -1,4 +1,5 @@
 
+import math
 from rest_framework.views import APIView
 from offers_app.models import Offer
 from profile_app.models import UserProfile
@@ -29,11 +30,12 @@ class BaseInfoView(APIView):
         ).count()
         review_count = Review.objects.all().count()
         average_rating = Review.objects.aggregate(Avg('rating'))
+        rounded_average_rating = round(average_rating['rating__avg'], 1)
         offer_count = Offer.objects.all().count()
 
         return Response({
             'business_profile_count': business_profile_count,
             'review_count': review_count,
-            'average_rating': average_rating['rating__avg'] or 0,
+            'average_rating': rounded_average_rating or 0,
             'offer_count': offer_count
         })
