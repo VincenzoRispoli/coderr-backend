@@ -59,33 +59,33 @@ Users can register either as **Clients** (looking for services) or as **Freelanc
 
 ## API-Endpoints
 
-**Registration and Login Endpoints**
-POST /api/auth/register/ → Register a new user and create a new token
+**Registration and Login Endpoints**<br>
+POST /api/auth/register/ → Register a new user and create a new token<br>
 POST /api/auth/login/ → Login and retrieve token
 
-**User Profiles Endpoints**
-GET /api/profiles/ → List all profiles
-GET /api/profiles/{id}/ → Retrieve profile details
+**User Profiles Endpoints**<br>
+GET /api/profiles/ → List all profiles<br>
+GET /api/profiles/{id}/ → Retrieve profile details<br>
 PATCH /api/profiles/{id}/ → Update profile (including linked User data)
 
-**Offers Endpoints**
-GET /api/offers/ → List all available offers
-POST /api/offers/ → Create a new offer (business/freelancer only)
-GET /api/offers/{id}/ → Retrieve offer details including Basic, Standard, Premium tiers
+**Offers Endpoints**<br>
+GET /api/offers/ → List all available offers<br>
+POST /api/offers/ → Create a new offer (business/freelancer only)<br>
+GET /api/offers/{id}/ → Retrieve offer details including Basic, Standard, Premium tiers<br>
 PATCH /api/offers/{id}/ → Update an offer
 
-**Order Endpoints**
-GET /api/orders/ List all availabale orders
-GET /api/orders/{id}/ → Retrieve order details
-POST /api/orders/ → Create an order for an offer
+**Order Endpoints**<br>
+GET /api/orders/ List all availabale orders<br>
+GET /api/orders/{id}/ → Retrieve order details<br>
+POST /api/orders/ → Create an order for an offer<br>
 PATCH /api/orders/ Update the status of a current order (in progress, completed or stopped)
 
-**Reviews Endpoints**
-GET /api/reviews/ List all available reviews
-GET /api/reviews/{id}/ → Retrieve review details
+**Reviews Endpoints**<br>
+GET /api/reviews/ List all available reviews<br>
+GET /api/reviews/{id}/ → Retrieve review details<br>
 POST /api/reviews/ → Create a review for a completed order
 
-**Base Info View**
+**Base Info View**<br>
 GET /api/base-info/  get information about the business profile count, the reviews count, the offers count and the avarage rating
 
 👨‍💻 Contributing
