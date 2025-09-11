@@ -1,0 +1,101 @@
+# Coderr
+
+Coderr is a platform inspired by Fiverr, designed to **connect clients with freelance developers**.  
+Users can register either as **Clients** (looking for services) or as **Freelancers** (offering services through tiered packages).
+
+---
+
+## ✨ Features
+
+- User registration and authentication (Business & Customer roles)
+- Custom user profiles with personal information, contact details, and files
+- Service offers (gigs) creation and management
+- Search and filter functionality for offers
+- Order system for purchasing services
+- User dashboard for tracking sales and purchases
+- RESTful API for frontend and third-party integration
+
+---
+
+## 🛠️ Tech Stack
+
+- **Backend**: Django, Django REST Framework
+- **Database**: SQLite3 for local development
+- **Authentication**:Token Authentication
+- **Frontend**: HTML/CSS/JavaScript
+
+---
+
+## 🚀 Installation & Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/coderr-frontend.git
+   git clone https://github.com/your-username/coderr-backend.git
+
+   cd coderr-frontend
+   cd coderr-backend
+
+2. Create and activate virtual enviroment
+
+   python -m venv venv
+   source venv/bin/activate   # Linux/Mac
+   venv\Scripts\activate      # Windows
+
+3. Install dependencies
+   pip install -r requirements.txt
+
+4. Apply migrations
+   python manage.py makemigrations
+   python manage.py migrate
+5. Create  superuser
+   python manage.py createsuperuser
+
+6. Run the development server
+   python manage.py runserver
+
+7. Access the project at: http://127.0.0.1:8000/  with ctrl + click over the link
+
+
+## API-Endpoints
+
+**Registration and Login Endpoints**
+POST /api/auth/register/ → Register a new user and create a new token
+POST /api/auth/login/ → Login and retrieve token
+
+**User Profiles Endpoints**
+GET /api/profiles/ → List all profiles
+GET /api/profiles/{id}/ → Retrieve profile details
+PATCH /api/profiles/{id}/ → Update profile (including linked User data)
+
+**Offers Endpoints**
+GET /api/offers/ → List all available offers
+POST /api/offers/ → Create a new offer (business/freelancer only)
+GET /api/offers/{id}/ → Retrieve offer details including Basic, Standard, Premium tiers
+PATCH /api/offers/{id}/ → Update an offer
+
+**Order Endpoints**
+GET /api/orders/ List all availabale orders
+GET /api/orders/{id}/ → Retrieve order details
+POST /api/orders/ → Create an order for an offer
+PATCH /api/orders/ Update the status of a current order (in progress, completed or stopped)
+
+**Reviews Endpoints**
+GET /api/reviews/ List all available reviews
+GET /api/reviews/{id}/ → Retrieve review details
+POST /api/reviews/ → Create a review for a completed order
+
+**Base Info View**
+GET /api/base-info/  get information about the business profile count, the reviews count, the offers count and the avarage rating
+
+👨‍💻 Contributing
+
+Fork the project
+
+Create your feature branch (git checkout -b feature/feature-name)
+
+Commit your changes (git commit -m "feat: description of feature")
+
+Push to the branch (git push origin feature/feature-name)
+
+Open a Pull Request 🚀
