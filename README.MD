@@ -30,31 +30,36 @@ Users can register either as **Clients** (looking for services) or as **Freelanc
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/VincenzoRispoli/coderr-frontend.git
    git clone https://github.com/VincenzoRispoli/coderr-backend.git
 
    cd coderr-frontend
    cd coderr-backend
 
 2. Create and activate virtual enviroment
-
+   ```bash
    python -m venv venv
    source venv/bin/activate   # Linux/Mac
    venv\Scripts\activate      # Windows
 
 3. Install dependencies
+   ```bash
    pip install -r requirements.txt
 
 4. Apply migrations
-   python manage.py makemigrations
+   ```bash
    python manage.py migrate
+
 5. Create  superuser
+   ```bash
    python manage.py createsuperuser
 
 6. Run the development server
+   ```bash
    python manage.py runserver
 
-7. Access the project at: http://127.0.0.1:8000/  with ctrl + click over the link
+7. Access the project with ctrl + click over the link at: 
+   ```bash
+   http://127.0.0.1:8000/
 
 
 ## API-Endpoints
