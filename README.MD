@@ -37,16 +37,18 @@ Users can register either as **Clients** (looking for services) or as **Freelanc
 2. Create and activate virtual enviroment
    ```bash
    python -m venv venv
+   ```
    
-   2.1 Activate the virtual environment (Windows):
+   2.1. Activate the virtual environment (Windows):
    ```bash
-   venv\Scripts\activate      # Windows
+   venv\Scripts\activate  
+   ```
 
-   2.2 Activate the virtual enviroment (Mac/Linux)
+   2.2. Activate the virtual enviroment (Mac/Linux)
    ```bash
-   source venv/bin/activate
+   source venv/bin/activate   
 
-   source venv/bin/activate   # Linux/Mac
+
 3. Install dependencies
    ```bash
    pip install -r requirements.txt
