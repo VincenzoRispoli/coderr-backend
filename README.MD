@@ -28,13 +28,13 @@ Users can register either as **Clients** (looking for services) or as **Freelanc
 
 ## 🚀 Installation & Setup
 
-1. Clone the repository:
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/VincenzoRispoli/coderr-backend.git
 
    cd coderr-backend
 
-2. Create and activate virtual enviroment
+2. **Create and activate virtual enviroment:**
    ```bash
    python -m venv venv
    ```
@@ -49,23 +49,23 @@ Users can register either as **Clients** (looking for services) or as **Freelanc
    source venv/bin/activate   
 
 
-3. Install dependencies
+3. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
 
-4. Apply migrations
+4. **Apply migrations:**
    ```bash
    python manage.py migrate
 
-5. Create  superuser
+5. **Create  superuser:**
    ```bash
    python manage.py createsuperuser
 
-6. Run the development server
+6. **Run the development server:**
    ```bash
    python manage.py runserver
 
-7. Access the project with ctrl + click over the link at: 
+7. **Access the project with ctrl + click over the link at:** 
    ```bash
    http://127.0.0.1:8000/
 
