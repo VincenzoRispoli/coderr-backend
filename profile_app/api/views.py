@@ -38,7 +38,8 @@ class ProfileViewSet(viewsets.ViewSet):
     """
 
     queryset = UserProfile.objects.all()
-    permission_classes = [IsAuthenticated,IsOwnerForPatchDeleteOrReadOnlyProfiles]
+    permission_classes = [IsAuthenticated,
+                         IsOwnerForPatchDeleteOrReadOnlyProfiles]
 
     def list(self, request):
         """Return a list of all user profiles."""
@@ -74,7 +75,6 @@ class ProfileViewSet(viewsets.ViewSet):
         return destructured_user_object
 
     def destructure_user_object(self, request):
-        user_data = request.data.get('user')
         """Extract and structure nested User and UserProfile data from the request."""
         return {
             'user': {
