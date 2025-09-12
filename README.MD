@@ -98,7 +98,7 @@ GET /api/reviews/ → List all available reviews<br>
 GET /api/reviews/{id}/ → Retrieve review details<br>
 POST /api/reviews/ → Create a review for a completed order
 
-### Base Info View**<br>
+### Base Info View<br>
 GET /api/base-info/ → get information about the business profile count, the reviews count, the offers count and the avarage rating
 
 👨‍💻 Contributing
