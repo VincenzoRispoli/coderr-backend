@@ -1,5 +1,5 @@
 
-import math
+from rest_framework import status
 from rest_framework.views import APIView
 from offers_app.models import Offer
 from profile_app.models import UserProfile
@@ -28,14 +28,14 @@ class BaseInfoView(APIView):
         business_profile_count = UserProfile.objects.filter(
             type="business"
         ).count()
-        review_count = Review.objects.all().count()
-        average_rating = Review.objects.aggregate(Avg('rating'))
-        rounded_average_rating = round(average_rating['rating__avg'], 1)
-        offer_count = Offer.objects.all().count()
-
+        review_count = Review.objects.all().count() or 0
+        average_rating = Review.objects.aggregate(
+            Avg('rating'))['rating__avg'] or 0
+        rounded_average_rating = round(average_rating, 1)
+        offer_count = Offer.objects.all().count() or 0
         return Response({
             'business_profile_count': business_profile_count,
             'review_count': review_count,
-            'average_rating': rounded_average_rating or 0,
+            'average_rating': rounded_average_rating,
             'offer_count': offer_count
-        })
+        }, status=status.HTTP_200_OK)
