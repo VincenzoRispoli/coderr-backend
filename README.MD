@@ -83,8 +83,8 @@ PATCH /api/profiles/{id}/ → Update profile (including linked User data)
 
 ### Offers Endpoints<br>
 GET /api/offers/ → List all available offers<br>
-POST /api/offers/ → Create a new offer (business/freelancer only)<br>
 GET /api/offers/{id}/ → Retrieve offer details including Basic, Standard, Premium tiers<br>
+POST /api/offers/ → Create a new offer (business/freelancer only)<br>
 PATCH /api/offers/{id}/ → Update an offer
 
 ### Order Endpoints<br>
