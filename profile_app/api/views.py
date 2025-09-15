@@ -33,18 +33,13 @@ class CustomerProfilesListView(APIView):
 class ProfileViewSet(viewsets.ViewSet):
     """ViewSet for managing UserProfile instances.
 
-    Supports listing all profiles, retrieving a single profile,
+    Supports retrieving a single profile,
     and partially updating profile data, including related User fields.
     """
 
     queryset = UserProfile.objects.all()
     permission_classes = [IsAuthenticated,
-                         IsOwnerForPatchDeleteOrReadOnlyProfiles]
-
-    def list(self, request):
-        """Return a list of all user profiles."""
-        serializer = UserProfileSerializer(self.queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+                          IsOwnerForPatchDeleteOrReadOnlyProfiles]
 
     def retrieve(self, request, pk):
         """Return a single user profile by primary key."""
@@ -54,6 +49,7 @@ class ProfileViewSet(viewsets.ViewSet):
 
     def partial_update(self, request, pk):
         """Partially update a user profile and its related User data."""
+        print("The request data are in patch are", request.data)
         user_profile_data = self.get_destructured_user_object(request)
         user_profile = get_object_or_404(self.queryset, pk=pk)
         self.check_object_permissions(request, user_profile)

@@ -10,10 +10,10 @@ customer profiles separately.
 """
 
 router = routers.SimpleRouter()
-router.register(r'profiles', ProfileViewSet, basename='profiles')
+router.register(r'profile', ProfileViewSet, basename='profile')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('profile/business/', BusinessProfilesListView.as_view()),
-    path('profile/customer/', CustomerProfilesListView.as_view()),
+    path('profiles/business/', BusinessProfilesListView.as_view()),
+    path('profiles/customer/', CustomerProfilesListView.as_view()),
 ]
