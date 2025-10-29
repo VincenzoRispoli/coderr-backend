@@ -1,27 +1,30 @@
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
+from django.db.models import Min, Max
 from profile_app.models import UserProfile
 from .permissions import IsOwnerForPatchDeleteOrReadOnlyOffers, IsBusinessUserOrReadOnlyOffers
 from .serializers import OfferDetailSerializer, OfferSerializer
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from offers_app.models import Offer, OfferDetails, Features
+from offers_app.models import Offer, OfferDetails
 from rest_framework import filters
 from .pagination import OfferPagination
 
 
 class OfferViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for managing offers.
+    ViewSet for managing Offer objects.
 
-    Provides list, retrieve, create, update, and delete actions.
-    Supports filtering by creator_id and max_delivery_time,
-    as well as search, ordering, and pagination.
+    Provides full CRUD functionality for offers, including search,
+    ordering, pagination, and custom filtering by creator and delivery time.
+    Custom permissions ensure that only authorized users can modify offers.
     """
-    queryset = Offer.objects.all()
+
     serializer_class = OfferSerializer
     permission_classes = [
-        IsOwnerForPatchDeleteOrReadOnlyOffers, IsBusinessUserOrReadOnlyOffers]
+        IsOwnerForPatchDeleteOrReadOnlyOffers, IsBusinessUserOrReadOnlyOffers
+    ]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title']
     ordering_fields = ['min_price', 'updated_at']
@@ -30,42 +33,100 @@ class OfferViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """
-        Optionally filter offers by creator_id or max_delivery_time.
+        Return a queryset of Offer objects filtered by query parameters.
+
+        Supports filtering by:
+        - creator_id: filters offers by the user who created them.
+        - max_delivery_time: filters offers with delivery time less than or equal to the provided value.
 
         Returns:
-            QuerySet: Filtered list of offers.
+            QuerySet: Filtered queryset of Offer instances.
         """
-        offer_user_id = self.request.query_params.get('creator_id')
-        if offer_user_id:
-            self.queryset = self.queryset.filter(user=offer_user_id)
+        queryset = Offer.objects.all()
+        creator_id = self.request.query_params.get('creator_id')
+        if creator_id:
+            queryset = queryset.filter(user=creator_id)
 
         min_delivery_time_param = self.request.query_params.get(
             'max_delivery_time')
         if min_delivery_time_param:
-            self.queryset = self.queryset.filter(
+            queryset = queryset.filter(
                 min_delivery_time__lte=min_delivery_time_param
             )
 
-        return self.queryset
+        return queryset
+
+    def perform_create(self, serializer):
+        """
+        Handle creation of a new Offer instance.
+
+        Automatically assigns:
+        - The authenticated user as the offer creator.
+        - The minimum price across all provided details.
+        - The minimum delivery time among all details.
+
+        Parameters:
+            serializer: OfferSerializer
+                The serializer instance used to validate and save the new offer.
+        """
+        offer_user = User.objects.get(id=self.request.user.id)
+        details = self.request.data['details']
+
+        # Calculate minimum price and minimum delivery time from offer details
+        min_price = min(detail['price'] for detail in details)
+        min_delivery_time = min(
+            detail['delivery_time_in_days'] for detail in details)
+
+        # Save the new offer with computed and user-related data
+        serializer.save(
+            user=offer_user,
+            min_price=min_price,
+            min_delivery_time=min_delivery_time
+        )
 
 
 class OfferDetailsView(APIView):
     """
-    API view for listing and creating offer details.
+    API view for managing OfferDetails objects.
 
-    Methods:
-        get(request): Retrieve all offer details.
-        post(request): Create a new offer detail.
+    Provides endpoints to:
+    - Retrieve a list of all offer details (GET).
+    - Create a new offer detail (POST).
     """
 
     def get(self, request):
-        """Return a list of all offer details."""
+        """
+        Handle GET requests.
+
+        Retrieves and returns all OfferDetails records in the system.
+
+        Parameters:
+            request: Request
+                The HTTP request object.
+
+        Returns:
+            Response: JSON response containing a list of serialized offer details
+                      and HTTP 200 OK status.
+        """
         offer_details = OfferDetails.objects.all()
         serializer = OfferDetailSerializer(offer_details, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        """Create a new offer detail."""
+        """
+        Handle POST requests.
+
+        Creates a new OfferDetails record based on the provided request data.
+
+        Parameters:
+            request: Request
+                The HTTP request object containing the offer detail data.
+
+        Returns:
+            Response: 
+                - On success: JSON response with serialized data and HTTP 201 Created.
+                - On failure: JSON response with validation errors and HTTP 400 Bad Request.
+        """
         serializer = OfferDetailSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -76,15 +137,29 @@ class OfferDetailsView(APIView):
 
 class OffersDetailsSingleView(APIView):
     """
-    API view for retrieving and updating a single offer detail.
+    API view for retrieving and updating a single OfferDetails instance.
 
-    Methods:
-        get(request, pk): Retrieve a single offer detail by its ID.
-        put(request, pk): Update an existing offer detail by its ID.
+    Provides endpoints to:
+    - Retrieve a specific offer detail by its primary key (GET).
+    - Update a specific offer detail partially or fully (PUT).
     """
 
     def get(self, request, pk):
-        """Return a single offer detail by its primary key."""
+        """
+        Handle GET requests.
+
+        Retrieve and return a single OfferDetails object identified by its primary key.
+
+        Parameters:
+            request: Request
+                The HTTP request object.
+            pk: int
+                Primary key of the OfferDetails instance to retrieve.
+
+        Returns:
+            Response: JSON response containing serialized offer detail data 
+                      and HTTP 200 OK status.
+        """
         offer_detail = OfferDetails.objects.get(pk=pk)
         serializer = OfferDetailSerializer(
             offer_detail, context={'request': request}
@@ -92,7 +167,23 @@ class OffersDetailsSingleView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, pk):
-        """Update an offer detail by its primary key."""
+        """
+        Handle PUT requests.
+
+        Update an existing OfferDetails instance with the provided data.
+        The update is partial (fields can be updated individually).
+
+        Parameters:
+            request: Request
+                The HTTP request object containing update data.
+            pk: int
+                Primary key of the OfferDetails instance to update.
+
+        Returns:
+            Response:
+                - On success: JSON response with updated data and HTTP 202 Accepted.
+                - On failure: JSON response with validation errors and HTTP 400 Bad Request.
+        """
         offer_detail = OfferDetails.objects.get(pk=pk)
         serializer = OfferDetailSerializer(
             offer_detail, data=request.data, partial=True
@@ -106,14 +197,31 @@ class OffersDetailsSingleView(APIView):
 
 class OfferOfBusinessUserView(APIView):
     """
-    API view for retrieving offers of a specific business user.
+    API view for retrieving offers belonging to a specific business user.
 
-    Methods:
-        get(request, business_user_id): Retrieve offers belonging to a business user.
+    Provides an endpoint to fetch offers associated with a given business user ID.
+    If the user exists and is of type "business", their offer is returned.
+    Otherwise, a message indicating that the customer user has no offers is returned.
     """
 
     def get(self, request, business_user_id):
-        """Return offers of a business user if available."""
+        """
+        Handle GET requests.
+
+        Retrieve offers created by a specific business user, identified by their ID.
+        If the user type is "business", return their offer data.
+
+        Parameters:
+            request: Request
+                The HTTP request object.
+            business_user_id: int
+                The ID of the business user whose offers are requested.
+
+        Returns:
+            Response:
+                - On success: JSON response containing the offer data and HTTP 200 OK.
+                - If no business offers exist: JSON message indicating absence of offers.
+        """
         offers = Offer.objects.filter(user=business_user_id)
         for offer in offers:
             if offer.user.type == "business":

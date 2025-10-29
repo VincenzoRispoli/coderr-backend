@@ -1,10 +1,10 @@
-from rest_framework.permissions import SAFE_METHODS, BasePermission
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 from profile_app.models import UserProfile
 
 
-class IsCustomerUserForPostOrReadOnlyOrders(BasePermission):
+class IsCustomerUserForPostReviewsOrReadOnly(BasePermission):
     """
-    Custom permission class for order-related operations.
+    Custom permission class for managing review creation and read-only access.
 
     This permission allows:
     - Read-only access (SAFE_METHODS) for all users.
@@ -18,13 +18,12 @@ class IsCustomerUserForPostOrReadOnlyOrders(BasePermission):
 
         Parameters:
             request: Request
-                The HTTP request object containing method and user info.
+                The HTTP request object.
             view: View
                 The view being accessed.
 
         Returns:
-            bool: True if the user is allowed to perform the request; 
-                  otherwise, False.
+            bool: True if the user is allowed to perform the request; otherwise, False.
         """
         # Allow safe (read-only) methods for all users
         if request.method in SAFE_METHODS:
@@ -33,43 +32,39 @@ class IsCustomerUserForPostOrReadOnlyOrders(BasePermission):
         # Attempt to retrieve the user's profile
         try:
             user_profile = UserProfile.objects.get(user_id=request.user.id)
-            print("The user profile for customer post is", user_profile)
         except UserProfile.DoesNotExist:
-            # Deny permission if the user has no associated profile
+            # Deny permission if the user has no profile
             return False
 
         # Allow POST requests only for authenticated users of type 'customer'
         if request.method == 'POST':
-            customer_profile = user_profile and user_profile.type == 'customer'
-            return request.user.is_authenticated and customer_profile
-
-        # Allow other methods only if the user is authenticated
-        return request.user.is_authenticated
+            print("Is ihm user profile?", user_profile)
+            is_customer = user_profile and user_profile.type == "customer"
+            return request.user.is_authenticated and is_customer
 
 
-class IsBusinessUserForUpdateOrder(BasePermission):
+class IsReviewOwnerForPatchDelete(BasePermission):
     """
-    Custom permission class for managing order updates by business users.
+    Custom permission class for managing updates and deletion of reviews.
 
     This permission allows:
     - Read-only access (SAFE_METHODS) for all users.
-    - POST requests for all users.
-    - PUT, PATCH, and DELETE requests only for authenticated users 
-      who are of type 'business' and own the order.
+    - PUT, PATCH, DELETE requests only for authenticated users of type 'customer'
+      who are the owners of the review.
     """
 
     def has_object_permission(self, request, view, obj):
         """
         Determine whether the requesting user has permission to perform 
-        an action on a specific order object.
+        an action on a specific review object.
 
         Parameters:
             request: Request
                 The HTTP request object.
             view: View
                 The view being accessed.
-            obj: Order
-                The order instance being accessed.
+            obj: Review
+                The review instance being accessed.
 
         Returns:
             bool: True if the user has permission for the operation; otherwise, False.
@@ -78,24 +73,15 @@ class IsBusinessUserForUpdateOrder(BasePermission):
         if request.method in SAFE_METHODS:
             return True
 
-        # Allow POST requests for all users
-        if request.method == 'POST':
-            return True
-
         # Attempt to retrieve the user's profile
         try:
             user_profile = UserProfile.objects.get(user_id=request.user.id)
-            print("The user profile for business update", user_profile)
         except UserProfile.DoesNotExist:
             # Deny permission if the user has no profile
             return False
 
-        # Allow PUT, PATCH, and DELETE only for business users
-        # who own the order and are authenticated
-        if request.method in ('PUT', 'PATCH', 'DELETE'):
-            business_user = user_profile and user_profile.type == "business"
-            is_owner_of_the_order = request.user == obj.business_user and business_user
-            return request.user.is_authenticated and is_owner_of_the_order and business_user
-
-        # Deny all other methods
-        return False
+        # Allow PUT, PATCH, DELETE only for customers who own the review
+        if request.method in ["PUT", "PATCH", "DELETE"]:
+            is_customer = user_profile and user_profile.type == "customer"
+            is_review_owner = obj.reviewer == request.user
+            return is_customer and is_review_owner

@@ -20,14 +20,14 @@ class Offer(models.Model):
         min_delivery_time (int): Minimum delivery time in days. Defaults to 1.
     """
 
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=100, blank=True)
-    file = models.FileField(blank=True, null=True, upload_to='offer-images/')
+    image = models.FileField(blank=True, null=True, upload_to='offer-images/')
     description = models.TextField(max_length=1000)
     created_at = models.DateField(auto_now_add=True)
-    updated_at = models.DateField(auto_now_add=True)
-    min_price = models.DecimalField(max_digits=100, decimal_places=2)
-    min_delivery_time = models.IntegerField(default=1)
+    updated_at = models.DateField(auto_now=True)
+    min_price = models.DecimalField(max_digits=100, decimal_places=2, null=True, blank=True)
+    min_delivery_time = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.title
@@ -53,6 +53,7 @@ class OfferDetails(models.Model):
 
     offer = models.ForeignKey(
         Offer, on_delete=models.CASCADE, related_name="details")
+    features = models.JSONField(default=list)
     title = models.CharField(max_length=255)
     revisions = models.IntegerField()
     delivery_time_in_days = models.IntegerField()
@@ -65,16 +66,3 @@ class OfferDetails(models.Model):
     class Meta:
         verbose_name = 'Offer Detail'
 
-
-class Features(models.Model):
-    """
-    Represents an individual feature associated with an offer detail.
-
-    Attributes:
-        offer_details (OfferDetails): The related offer detail. Deleting it deletes the features.
-        name (str): The name of the feature (max length 255).
-    """
-    
-    offer_details = models.ForeignKey(
-        OfferDetails, on_delete=models.CASCADE, related_name="features")
-    name = models.CharField(max_length=255)

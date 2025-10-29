@@ -16,14 +16,19 @@ class UserProfile(models.Model):
         ('business', 'Business')
     )
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    username = models.CharField(max_length=100)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField()
     file = models.FileField(upload_to='profile-images/', blank=True, null=True)
     location = models.CharField(max_length=50, blank=True)
     tel = models.CharField(max_length=30, blank=True)
     description = models.TextField(max_length=1000, blank=True)
     working_hours = models.CharField(max_length=50, blank=True)
     type = models.CharField(max_length=50, choices=USER_TYPES)
-    uploaded_at = models.DateTimeField(auto_now_add=True, blank=True)
+    created_at= models.DateTimeField(auto_now_add=True, blank=True)
+    uploaded_at = models.DateTimeField(auto_now=True, blank=True)
 
     def __str__(self):
         """Return the username associated with this profile."""

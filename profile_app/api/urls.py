@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import BusinessProfilesListView, CustomerProfilesListView, ProfileViewSet
+from .views import BusinessProfilesListView, CustomerProfilesListView, ProfileView
 from rest_framework import routers
 
 """URL configuration for UserProfile-related API endpoints.
@@ -9,11 +9,8 @@ CRUD operations via a viewset, and custom endpoints for listing business and
 customer profiles separately.
 """
 
-router = routers.SimpleRouter()
-router.register(r'profile', ProfileViewSet, basename='profile')
-
 urlpatterns = [
-    path('', include(router.urls)),
+    path('profile/<int:user>/', ProfileView.as_view(), name='profile-detail'),
     path('profiles/business/', BusinessProfilesListView.as_view()),
     path('profiles/customer/', CustomerProfilesListView.as_view()),
 ]

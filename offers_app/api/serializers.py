@@ -1,33 +1,8 @@
 
-from offers_app.models import Offer, OfferDetails, Features
+from offers_app.models import Offer, OfferDetails
 from rest_framework import serializers
 from django.contrib.auth.models import User
-
 from profile_app.models import UserProfile
-
-
-class FeatureSerializer(serializers.ModelSerializer):
-    """
-    Serializer for the Features model.
-
-    This serializer handles the representation of individual features
-    associated with an OfferDetail. The `offer_details` field is read-only
-    and represents the related offer detail instance.
-
-    Attributes:
-        offer_details (PrimaryKeyRelatedField): Read-only reference to the
-            related OfferDetail instance.
-        name (str): The name of the feature.
-
-    Meta:
-        model (Features): The model associated with this serializer.
-        fields (list): List of fields to include in serialization.
-    """
-    offer_details = serializers.PrimaryKeyRelatedField(read_only=True)
-
-    class Meta:
-        model = Features
-        fields = ['id', 'offer_details', 'name']
 
 
 class OfferDetailSerializer(serializers.ModelSerializer):
@@ -49,7 +24,6 @@ class OfferDetailSerializer(serializers.ModelSerializer):
         fields (list): List of fields to include in serialization.
     """
     offer = serializers.PrimaryKeyRelatedField(read_only=True)
-    features = FeatureSerializer(many=True)
 
     class Meta:
         model = OfferDetails
@@ -59,166 +33,122 @@ class OfferDetailSerializer(serializers.ModelSerializer):
         ]
 
 
-class OfferDetailHyperLinkSerializer(serializers.HyperlinkedModelSerializer):
-    """
-    Hyperlinked serializer for the OfferDetails model.
-
-    This serializer provides a minimal representation of OfferDetails
-    with a hyperlink to the detailed view. Useful for nested or list
-    representations where only the URL reference is required.
-
-    Meta:
-        model (OfferDetails): The model associated with this serializer.
-        fields (list): List of fields to include in serialization.
-        extra_kwargs (dict): Additional configuration for the URL field,
-            including the view name and lookup field.
-    """
-
-    class Meta:
-        model = OfferDetails
-        fields = ['id', 'url']
-        extra_kwargs = {
-            'url': {'view_name': 'offerdetails-detail', 'lookup_field': 'pk'}
-        }
-
-
 class OfferSerializer(serializers.ModelSerializer):
     """
     Serializer for the Offer model.
 
-    This serializer handles the representation, creation, and updating of
-    Offer objects along with their related OfferDetails and Features.
-    It includes custom logic for nested relationships and provides
-    additional computed fields such as `user_details`.
-
-    Attributes:
-        user_details (SerializerMethodField): Provides read-only details
-            about the related user (first name, last name, username).
-        details (OfferDetailSerializer): Nested serializer for offer
-            details, supporting multiple entries.
-        user (PrimaryKeyRelatedField): Read-only primary key reference to
-            the related UserProfile.
-        user_id (PrimaryKeyRelatedField): Write-only field to set the
-            related UserProfile when creating an offer.
-
-    Meta:
-        model (Offer): The model associated with this serializer.
-        fields (list): List of fields to be included in serialization
-            and deserialization.
+    This serializer includes nested details and user-related information.
+    It provides methods to handle creation and updating of Offer objects 
+    along with their related OfferDetails entries.
     """
+
     user_details = serializers.SerializerMethodField()
     details = OfferDetailSerializer(many=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True)
-    user_id = serializers.PrimaryKeyRelatedField(
-        queryset=UserProfile.objects.all(),
-        write_only=True,
-        source='user'
-    )
 
     class Meta:
+        """
+        Meta configuration for the OfferSerializer.
+
+        Specifies the model associated with the serializer and the 
+        fields to be included in the serialized representation.
+        """
         model = Offer
-        fields = ['id', 'user', 'user_id', 'user_details', 'details',
-                  'title', 'file', 'description', 'created_at',
-                  'updated_at', 'min_price', 'min_delivery_time']
+        fields = [
+            'id', 'user', 'user_details', 'details',
+            'title', 'image', 'description', 'created_at',
+            'updated_at', 'min_price', 'min_delivery_time'
+        ]
 
     def get_user_details(self, obj):
         """
-        Return basic details of the user associated with the offer.
+        Retrieve basic user information related to the offer.
 
-        Args:
-            obj (Offer): The offer instance being serialized.
+        Parameters:
+            obj: Offer instance being serialized.
 
         Returns:
-            dict: A dictionary containing the user's first name,
-            last name, and username.
+            dict: Dictionary containing the user's first name, last name, and username.
         """
         return {
-            "first_name": obj.user.user.first_name,
-            "last_name": obj.user.user.last_name,
-            "username": obj.user.user.username
+            "first_name": obj.user.first_name,
+            "last_name": obj.user.last_name,
+            "username": obj.user.username
         }
 
     def create(self, validated_data):
         """
-        Create a new Offer instance along with its nested details and
-        features.
+        Create a new Offer instance along with its related OfferDetails.
 
-        Args:
-            validated_data (dict): The validated input data.
+        Parameters:
+            validated_data: Dictionary of validated input data.
 
         Returns:
-            Offer: The created offer instance.
+            Offer: The created Offer instance.
         """
         details_data = validated_data.pop('details', [])
         offer = Offer.objects.create(**validated_data)
 
+        # Create each related OfferDetails entry
         for detail_data in details_data:
-            features_data = detail_data.pop('features', [])
-            detail = OfferDetails.objects.create(offer=offer, **detail_data)
-            for feature_data in features_data:
-                Features.objects.create(offer_details=detail, **feature_data)
+            OfferDetails.objects.create(offer=offer, **detail_data)
         return offer
 
     def update(self, instance, validated_data):
         """
-        Update an existing Offer instance along with its nested details
-        and features.
+        Update an existing Offer instance and its related OfferDetails.
 
-        Args:
-            instance (Offer): The offer instance to update.
-            validated_data (dict): The validated input data.
+        Parameters:
+            instance: The existing Offer object to update.
+            validated_data: Dictionary of validated input data.
 
         Returns:
-            Offer: The updated offer instance.
+            Offer: The updated Offer instance.
         """
         offer_details_data = validated_data.pop('details', {})
         self.save_offer_instance(instance, validated_data)
 
+        # Update each related OfferDetails entry
         details = instance.details.all()
         for detail_instance, offer_detail_data in zip(details, offer_details_data):
-            features_data = offer_detail_data.pop('features', [])
             self.save_details_instance(detail_instance, offer_detail_data)
-
-            features = detail_instance.features.all()
-            for feature_intance, feature_data in zip(features, features_data):
-                self.save_features_instance(feature_intance, feature_data)
 
         return instance
 
     def save_offer_instance(self, instance, validated_data):
         """
-        Save the attributes of an offer instance.
+        Update the given Offer instance with validated data.
 
-        Args:
-            instance (Offer): The offer instance to update.
-            validated_data (dict): The validated attributes and values.
+           Iterates over each key-value pair in the validated data and assigns 
+        the value to the corresponding attribute of the Offer instance. 
+        The instance is saved after updating each attribute.
+
+        Parameters:
+            instance: Offer
+            The Offer instance to update.
+            validated_data: dict
+            Dictionary containing the validated data for the offer.
         """
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
             instance.save()
 
+
     def save_details_instance(self, detail_instance, offer_detail_data):
         """
-        Save or update an offer detail instance using its serializer.
+        Update a related OfferDetails instance using the OfferDetailSerializer.
 
-        Args:
-            detail_instance (OfferDetails): The detail instance to update.
-            offer_detail_data (dict): The validated attributes for the detail.
+        Initializes a serializer with the existing OfferDetails instance 
+        and the provided data (partial update allowed). If the data is valid, 
+        the serializer saves the updated instance.
+
+        Parameters:
+            detail_instance: OfferDetails
+                The OfferDetails instance to update.
+            offer_detail_data: dict
+                Dictionary containing the validated data for the offer detail.
         """
         offer_detail_serializer = OfferDetailSerializer(
             detail_instance, data=offer_detail_data, partial=True)
         if offer_detail_serializer.is_valid():
             offer_detail_serializer.save()
-
-    def save_features_instance(self, feature_intance, feature_data):
-        """
-        Save or update a feature instance using its serializer.
-
-        Args:
-            feature_intance (Features): The feature instance to update.
-            feature_data (dict): The validated attributes for the feature.
-        """
-        feature_serializer = FeatureSerializer(
-            feature_intance, data=feature_data, partial=True)
-        if feature_serializer.is_valid():
-            feature_serializer.save()

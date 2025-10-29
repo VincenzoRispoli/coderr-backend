@@ -1,5 +1,6 @@
 from profile_app.models import UserProfile
 from user_auth_app.api.serializers import UserSerializer
+from django.contrib.auth.models import User
 from rest_framework import serializers
 
 
@@ -11,34 +12,32 @@ class UserProfileSerializer(serializers.ModelSerializer):
     object in a single request.
     """
 
-    user = UserSerializer()
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         """Meta options for the UserProfileSerializer."""
 
         model = UserProfile
         fields = [
-            'user', 'id', 'file', 'location', 'tel',
-            'description', 'working_hours', 'type', 'uploaded_at'
+            'user', 'username', 'first_name', 'last_name', 'email', 'file', 'location', 'tel',
+            'description', 'working_hours', 'type', 'created_at'
         ]
-        extra_kwargs = {
-            'username': {'required': False, 'allow_blank': True},
-            'first_name': {'required': False, 'allow_blank': True},
-            'last_name': {'required': False, 'allow_blank': True},
-            'email': {'required': False, 'allow_blank': True},
-        }
 
-    def update(self, instance, validated_data):
-        """Update a UserProfile instance along with its related User object."""
-        user_data = validated_data.pop('user', {})
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+class BusinessUserProfileSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
 
-        user = instance.user
-        user_serializer = UserSerializer(user, data=user_data, partial=True)
-        if user_serializer.is_valid(raise_exception=True):
-            user_serializer.save()
+    class Meta:
+        model = UserProfile
+        fields = ['user', 'username', 'first_name',
+                  'last_name', 'file', 'tel', 'description', 'working_hours', 'type']
 
-        return instance
+
+class CustomerUserProfileSerializer(serializers.ModelSerializer):
+
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = UserProfile
+        fields = ['user', 'username', 'first_name',
+                  'last_name', 'file', 'uploaded_at', 'type']
