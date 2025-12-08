@@ -70,7 +70,6 @@ Users can register either as **Clients** (looking for services) or as **Freelanc
    http://127.0.0.1:8000/
    ```
 
-
 ## API-Endpoints
 
 ### Registration and Login Endpoints<br>
