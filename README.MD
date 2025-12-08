@@ -46,8 +46,8 @@ Users can register either as **Clients** (looking for services) or as **Freelanc
 
    2.2. Activate the virtual enviroment (Mac/Linux)
    ```bash
-   source venv/bin/activate   
-
+   source venv/bin/activate 
+   ```
 
 3. **Install dependencies:**
    ```bash

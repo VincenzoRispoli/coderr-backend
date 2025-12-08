@@ -45,6 +45,8 @@ class OfferSerializer(serializers.ModelSerializer):
     user_details = serializers.SerializerMethodField()
     details = OfferDetailSerializer(many=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True)
+    min_price = serializers.DecimalField(
+        max_digits=100, decimal_places=2, coerce_to_string=False, read_only=True)
 
     class Meta:
         """
@@ -88,10 +90,16 @@ class OfferSerializer(serializers.ModelSerializer):
         """
         details_data = validated_data.pop('details', [])
         offer = Offer.objects.create(**validated_data)
+        prices = []
+        delivery_times = []
 
         # Create each related OfferDetails entry
         for detail_data in details_data:
-            OfferDetails.objects.create(offer=offer, **detail_data)
+            detail = OfferDetails.objects.create(offer=offer, **detail_data)
+            prices.append(detail.price)
+            delivery_times.append(detail.delivery_time_in_days)
+            offer.min_price = min(prices) if prices else 0
+            offer.min_delivery_time = min(delivery_times) if prices else 0
         return offer
 
     def update(self, instance, validated_data):
@@ -132,7 +140,6 @@ class OfferSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
             instance.save()
-
 
     def save_details_instance(self, detail_instance, offer_detail_data):
         """

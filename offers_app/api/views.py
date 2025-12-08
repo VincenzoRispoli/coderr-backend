@@ -73,6 +73,7 @@ class OfferViewSet(viewsets.ModelViewSet):
         details = self.request.data['details']
 
         # Calculate minimum price and minimum delivery time from offer details
+
         min_price = min(detail['price'] for detail in details)
         min_delivery_time = min(
             detail['delivery_time_in_days'] for detail in details)
