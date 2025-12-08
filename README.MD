@@ -68,6 +68,7 @@ Users can register either as **Clients** (looking for services) or as **Freelanc
 7. **Access the project with ctrl + click over the link at:** 
    ```bash
    http://127.0.0.1:8000/
+   ```
 
 
 ## API-Endpoints
