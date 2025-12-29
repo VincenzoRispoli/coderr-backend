@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import OfferViewSet, OfferDetailsView, OffersDetailsSingleView, OfferOfBusinessUserView
+from .views import OfferViewSet, OfferDetailListView, OffersDetailsSingleView, OfferOfBusinessUserView
 from rest_framework import routers
 
 """
@@ -35,7 +35,7 @@ urlpatterns = [
     # Endpoint for listing and creating offer details
     path(
         'offerdetails/',
-        OfferDetailsView.as_view(),
+        OfferDetailListView.as_view(),
         name="offerdetails-list"
     ),
 

@@ -4,10 +4,10 @@ from rest_framework import viewsets, status
 from profile_app.models import UserProfile
 from django.contrib.auth.models import User
 from reviews_app.models import Review
-from .serializers import ReviewsSerializer
+from .serializers import ReviewsListCreateSerializer, ReviewRetrieveUpdateDestroySerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import filters, generics
+from rest_framework import filters, generics, permissions
 from .permissions import IsCustomerUserForPostReviewsOrReadOnly, IsReviewOwnerForPatchDelete
 
 
@@ -19,8 +19,8 @@ class ReviewsView(generics.ListCreateAPIView):
     - List reviews with optional filtering by business user or reviewer.
     - Create new reviews by authenticated customer users.
     """
-    serializer_class = ReviewsSerializer
-    permission_classes = [IsCustomerUserForPostReviewsOrReadOnly]
+    serializer_class = ReviewsListCreateSerializer
+    permission_classes = [IsCustomerUserForPostReviewsOrReadOnly,permissions.IsAuthenticated]
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['updated_at', 'rating']
     lookup_field = "pk"
@@ -48,26 +48,10 @@ class ReviewsView(generics.ListCreateAPIView):
 
         return queryset
 
+    
     def perform_create(self, serializer):
-        """
-        Handle creation of a new Review instance.
-
-        Automatically assigns:
-        - reviewer: The authenticated user making the request.
-        - business_user: Retrieved from the request data.
-
-        Parameters:
-            serializer: ReviewsSerializer
-                The serializer instance used to validate and save the new review.
-        """
-        business_user_id = self.request.data.get('business_user')
-        business_user = User.objects.get(id=business_user_id)
         reviewer = self.request.user
-
-        serializer.save(
-            reviewer=reviewer,
-            business_user=business_user
-        )
+        serializer.save(reviewer=reviewer)
 
 
 class ReviewsDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -77,7 +61,7 @@ class ReviewsDetailView(generics.RetrieveUpdateDestroyAPIView):
     Permissions enforce that only the review owner can modify or delete the review,
     while read-only access is allowed otherwise.
     """
-    serializer_class = ReviewsSerializer
+    serializer_class = ReviewRetrieveUpdateDestroySerializer
     permission_classes = [IsReviewOwnerForPatchDelete]
     queryset = Review.objects.all()
     lookup_field = "pk"

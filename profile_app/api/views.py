@@ -19,6 +19,7 @@ class BusinessProfilesListView(APIView):
     Provides an endpoint to return a list of UserProfile instances 
     where the type is 'business'.
     """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """
@@ -47,6 +48,7 @@ class CustomerProfilesListView(APIView):
     Provides an endpoint to return a list of UserProfile instances 
     where the type is 'customer'.
     """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """

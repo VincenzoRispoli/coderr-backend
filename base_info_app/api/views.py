@@ -25,17 +25,15 @@ class BaseInfoView(APIView):
                 - average_rating: Average rating of all reviews.
                 - offer_count: Total number of offers.
         """
-        business_profile_count = UserProfile.objects.filter(
-            type="business"
-        ).count()
+        business_profile_count = UserProfile.objects.filter(type="business").count() or 0
         review_count = Review.objects.all().count() or 0
         average_rating = Review.objects.aggregate(
             Avg('rating'))['rating__avg'] or 0
         rounded_average_rating = round(average_rating, 1)
         offer_count = Offer.objects.all().count() or 0
         return Response({
-            'business_profile_count': business_profile_count,
             'review_count': review_count,
             'average_rating': rounded_average_rating,
+            'business_profile_count': business_profile_count,
             'offer_count': offer_count
         }, status=status.HTTP_200_OK)

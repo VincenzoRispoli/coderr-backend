@@ -47,7 +47,7 @@ class BusinessUserProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = [
             'user', 'username', 'first_name',
-            'last_name', 'file', 'tel', 'description','location',
+            'last_name', 'file','location', 'tel', 'description',
             'working_hours', 'type'
         ]
 

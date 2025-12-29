@@ -1,161 +1,224 @@
-
 from offers_app.models import Offer, OfferDetails
 from rest_framework import serializers
-from django.contrib.auth.models import User
-from profile_app.models import UserProfile
 
 
-class OfferDetailSerializer(serializers.ModelSerializer):
+class OfferDetailsSerializer(serializers.ModelSerializer):
     """
-    Serializer for the OfferDetails model.
-
-    This serializer represents detailed options for an offer, including
-    nested features associated with each detail. The `offer` field is
-    read-only and links back to the parent Offer.
-
-    Attributes:
-        offer (PrimaryKeyRelatedField): Read-only reference to the related
-            Offer instance.
-        features (FeatureSerializer): Nested serializer for associated
-            features. Supports multiple entries.
-
-    Meta:
-        model (OfferDetails): The model associated with this serializer.
-        fields (list): List of fields to include in serialization.
+    Serializer for OfferDetails model.
+    Handles validation and serialization of offer detail data.
     """
-    offer = serializers.PrimaryKeyRelatedField(read_only=True)
+    price = serializers.FloatField()
 
     class Meta:
+        """
+        Metadata configuration for the serializer.
+        """
         model = OfferDetails
         fields = [
-            'id', 'title', 'offer', 'revisions',
-            'delivery_time_in_days', 'price', 'offer_type', 'features'
+            "id",
+            "title",
+            "revisions",
+            "delivery_time_in_days",
+            "price",
+            "features",
+            "offer_type",
         ]
+
+    def validate_title(self, value):
+        """
+        Validate that the offer title is at least 3 characters long.
+        """
+        if value is None or len(value) < 3:
+            raise serializers.ValidationError(
+                "Der Titel der Angebotsdetails muss mindestens 3 Zeichen lang sein"
+            )
+        return value
+
+    def validate_price(self, value):
+        """
+        Validate that the price is greater than zero.
+        """
+        if value is None or value <= 0:
+            raise serializers.ValidationError(
+                "Der Preis muss größer als 0 sein"
+            )
+        return value
+
+    def validate_delivery_time_in_days(self, value):
+        """
+        Validate that the delivery time is at least 1 day.
+        """
+        if value is None or value <= 0:
+            raise serializers.ValidationError(
+                "Die Lieferzeit in Tagen muss mindestens 1 betragen"
+            )
+        return value
 
 
 class OfferSerializer(serializers.ModelSerializer):
     """
-    Serializer for the Offer model.
-
-    This serializer includes nested details and user-related information.
-    It provides methods to handle creation and updating of Offer objects 
-    along with their related OfferDetails entries.
+    Serializer for Offer model.
+    Handles nested serialization and persistence of related offer details.
     """
-
-    user_details = serializers.SerializerMethodField()
-    details = OfferDetailSerializer(many=True)
-    user = serializers.PrimaryKeyRelatedField(read_only=True)
-    min_price = serializers.DecimalField(
-        max_digits=100, decimal_places=2, coerce_to_string=False, read_only=True)
+    details = OfferDetailsSerializer(many=True)
 
     class Meta:
         """
-        Meta configuration for the OfferSerializer.
-
-        Specifies the model associated with the serializer and the 
-        fields to be included in the serialized representation.
+        Metadata configuration for the serializer.
         """
         model = Offer
         fields = [
-            'id', 'user', 'user_details', 'details',
-            'title', 'image', 'description', 'created_at',
-            'updated_at', 'min_price', 'min_delivery_time'
+            "id",
+            "title",
+            "image",
+            "description",
+            "details",
         ]
 
-    def get_user_details(self, obj):
+    def validate_title(self, value):
         """
-        Retrieve basic user information related to the offer.
-
-        Parameters:
-            obj: Offer instance being serialized.
-
-        Returns:
-            dict: Dictionary containing the user's first name, last name, and username.
+        Validate that the offer title is at least 3 characters long.
         """
-        return {
-            "first_name": obj.user.first_name,
-            "last_name": obj.user.last_name,
-            "username": obj.user.username
-        }
+        if value is None or len(value) < 3:
+            raise serializers.ValidationError(
+                "Der Titel des Angebots muss mindestens 3 Zeichen lang sein"
+            )
+        return value
 
     def create(self, validated_data):
         """
-        Create a new Offer instance along with its related OfferDetails.
-
-        Parameters:
-            validated_data: Dictionary of validated input data.
-
-        Returns:
-            Offer: The created Offer instance.
+        Create an Offer instance along with its related OfferDetails.
         """
         details_data = validated_data.pop('details', [])
         offer = Offer.objects.create(**validated_data)
-        prices = []
-        delivery_times = []
 
-        # Create each related OfferDetails entry
-        for detail_data in details_data:
-            detail = OfferDetails.objects.create(offer=offer, **detail_data)
-            prices.append(detail.price)
-            delivery_times.append(detail.delivery_time_in_days)
-            offer.min_price = min(prices) if prices else 0
-            offer.min_delivery_time = min(delivery_times) if prices else 0
+        for detail in details_data:
+            OfferDetails.objects.create(offer=offer, **detail)
+
         return offer
 
     def update(self, instance, validated_data):
         """
-        Update an existing Offer instance and its related OfferDetails.
-
-        Parameters:
-            instance: The existing Offer object to update.
-            validated_data: Dictionary of validated input data.
-
-        Returns:
-            Offer: The updated Offer instance.
+        Update an Offer instance and partially update its related OfferDetails.
         """
-        offer_details_data = validated_data.pop('details', {})
-        self.save_offer_instance(instance, validated_data)
+        details_data = validated_data.pop('details', [])
 
-        # Update each related OfferDetails entry
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
         details = instance.details.all()
-        for detail_instance, offer_detail_data in zip(details, offer_details_data):
-            self.save_details_instance(detail_instance, offer_detail_data)
+        for detail_instance, single_detail_data in zip(details, details_data):
+            offer_detail_serializer = OfferDetailsSerializer(
+                detail_instance,
+                data=single_detail_data,
+                partial=True,
+            )
+            if offer_detail_serializer.is_valid():
+                offer_detail_serializer.save()
 
         return instance
 
-    def save_offer_instance(self, instance, validated_data):
+
+class OfferUrlSerializer(serializers.ModelSerializer):
+    """
+    Serializer that exposes a minimal representation of OfferDetails,
+    including a dynamically generated detail URL.
+    """
+    url = serializers.SerializerMethodField()
+
+    class Meta:
         """
-        Update the given Offer instance with validated data.
-
-           Iterates over each key-value pair in the validated data and assigns 
-        the value to the corresponding attribute of the Offer instance. 
-        The instance is saved after updating each attribute.
-
-        Parameters:
-            instance: Offer
-            The Offer instance to update.
-            validated_data: dict
-            Dictionary containing the validated data for the offer.
+        Metadata configuration for the serializer.
         """
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-            instance.save()
+        model = OfferDetails
+        fields = ["id", "url"]
 
-    def save_details_instance(self, detail_instance, offer_detail_data):
+    def get_url(self, obj):
         """
-        Update a related OfferDetails instance using the OfferDetailSerializer.
-
-        Initializes a serializer with the existing OfferDetails instance 
-        and the provided data (partial update allowed). If the data is valid, 
-        the serializer saves the updated instance.
-
-        Parameters:
-            detail_instance: OfferDetails
-                The OfferDetails instance to update.
-            offer_detail_data: dict
-                Dictionary containing the validated data for the offer detail.
+        Build and return the URL for the offer details resource.
         """
-        offer_detail_serializer = OfferDetailSerializer(
-            detail_instance, data=offer_detail_data, partial=True)
-        if offer_detail_serializer.is_valid():
-            offer_detail_serializer.save()
+        return f"/offerdetails/{obj.id}/"
+
+
+class OfferHyperLinkedSerializer(serializers.HyperlinkedModelSerializer):
+    """
+    Hyperlinked serializer for OfferDetails.
+    Provides a URL-based representation of the resource.
+    """
+
+    class Meta:
+        """
+        Metadata configuration for the serializer.
+        """
+        model = OfferDetails
+        fields = ["id", "url"]
+
+
+class OfferListSerializer(OfferSerializer):
+    """
+    Serializer for listing offers.
+    Extends OfferSerializer with aggregated data and user information.
+    """
+    user_details = serializers.SerializerMethodField()
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    details = OfferUrlSerializer(many=True)
+    min_price = serializers.FloatField(read_only=True)
+
+    class Meta:
+        """
+        Metadata configuration for the serializer.
+        """
+        model = Offer
+        fields = [
+            "id",
+            "user",
+            "title",
+            "image",
+            "description",
+            "created_at",
+            "updated_at",
+            "details",
+            "min_price",
+            "min_delivery_time",
+            "user_details",
+        ]
+
+    def get_user_details(self, obj):
+        """
+        Return basic public information about the offer owner.
+        """
+        user = obj.user
+        return {
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "username": user.username,
+        }
+
+
+class OfferRetrieveSerializer(OfferSerializer):
+    """
+    Serializer for retrieving a single Offer instance.
+    Uses hyperlinked representation for related OfferDetails.
+    """
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    details = OfferHyperLinkedSerializer(many=True)
+    min_price = serializers.FloatField(read_only=True)
+
+    class Meta:
+        """
+        Metadata configuration for the serializer.
+        """
+        model = Offer
+        fields = [
+            "id",
+            "user",
+            "title",
+            "image",
+            "description",
+            "created_at",
+            "updated_at",
+            "details",
+            "min_price",
+            "min_delivery_time",
+        ]

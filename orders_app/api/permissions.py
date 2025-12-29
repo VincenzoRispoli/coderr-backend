@@ -33,7 +33,6 @@ class IsCustomerUserForPostOrReadOnlyOrders(BasePermission):
         # Attempt to retrieve the user's profile
         try:
             user_profile = UserProfile.objects.get(user_id=request.user.id)
-            print("The user profile for customer post is", user_profile)
         except UserProfile.DoesNotExist:
             # Deny permission if the user has no associated profile
             return False
@@ -85,7 +84,6 @@ class IsBusinessUserForUpdateOrder(BasePermission):
         # Attempt to retrieve the user's profile
         try:
             user_profile = UserProfile.objects.get(user_id=request.user.id)
-            print("The user profile for business update", user_profile)
         except UserProfile.DoesNotExist:
             # Deny permission if the user has no profile
             return False
