@@ -54,9 +54,9 @@ class OfferViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         details = self.request.data['details']
-        min_price = min(detail['price'] for detail in details)
+        min_price = min(float(detail['price']) for detail in details)
         min_delivery_time = min(
-            detail['delivery_time_in_days'] for detail in details
+            int(detail['delivery_time_in_days']) for detail in details
         )
         serializer.save(
             user=user,
