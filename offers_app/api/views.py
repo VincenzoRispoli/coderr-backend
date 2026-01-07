@@ -1,3 +1,4 @@
+from django.forms import ValidationError
 from rest_framework.views import APIView
 from offers_app.models import Offer, OfferDetails
 from .serializers import OfferSerializer, OfferDetailsSerializer, OfferListSerializer, OfferRetrieveSerializer
@@ -6,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from .pagination import OfferPagination
 from .permissions import IsBusinessUserOrReadOnlyOffers, IsOwnerForPatchDeleteOrReadOnlyOffers
+from .functions import min_dev_time_validation
 
 
 class OfferViewSet(viewsets.ModelViewSet):
@@ -22,10 +24,22 @@ class OfferViewSet(viewsets.ModelViewSet):
     ordering = ['-updated_at']
     permission_classes = [
         IsBusinessUserOrReadOnlyOffers,
-        IsOwnerForPatchDeleteOrReadOnlyOffers,
-        permissions.IsAuthenticated,
+        IsOwnerForPatchDeleteOrReadOnlyOffers
     ]
     lookup_field = 'id'
+
+    def get_permissions(self):
+        permission_classes = [permissions.AllowAny]
+        if self.action == "list":
+            permission_classes = [permissions.AllowAny]
+        if self.action == "retrieve":
+            permission_classes = [permissions.IsAuthenticated]
+        if self.action == "create":
+            permission_classes = [IsBusinessUserOrReadOnlyOffers]
+        if self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsOwnerForPatchDeleteOrReadOnlyOffers]
+
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         """
@@ -40,10 +54,10 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         min_delivery_time = self.request.query_params.get('max_delivery_time')
         if min_delivery_time:
+            min_delivery_time = min_dev_time_validation(min_delivery_time)
             queryset = queryset.filter(
                 min_delivery_time__lte=min_delivery_time
             )
-
         return queryset
 
     def perform_create(self, serializer):

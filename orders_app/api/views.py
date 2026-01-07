@@ -37,10 +37,12 @@ class OrdersViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Assign the current user as the customer_user when creating a new order.
+        Save a new instance with any additional context or fields before committing to the database.
+
+        In DRF, 'self.context["request"]' is automatically available in the serializer,
+        so you can use it to associate the current user or other request-specific data.
         """
-        user = self.request.user
-        serializer.save(customer_user=user)
+        serializer.save()
 
     def get_serializer_class(self):
         """
@@ -52,6 +54,7 @@ class OrdersViewSet(viewsets.ModelViewSet):
         if self.action == "create":
             return OrderCreateSerializer
         if self.action in ["update", "partial_update"]:
+            print("Order update gerufen")
             return OrderUpdateSerializer
         return OrderListSerializer
 
@@ -71,17 +74,17 @@ class OrderCountView(APIView):
         try:
             user = UserProfile.objects.get(user_id=business_user_id)
         except UserProfile.DoesNotExist:
-            return Response(
-                "The user does not exist", status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "Der Benutzer existiert nicht"}, status=status.HTTP_404_NOT_FOUND
+                            )
 
         if user.type != "business":
             return Response(
-                "Only business users can count their orders", status=status.HTTP_403_FORBIDDEN
+                {"detail": "Nur Geschäftsnutzer können ihre Bestellungen zählen."}, status=status.HTTP_403_FORBIDDEN
             )
 
-        count = Order.objects.filter(business_user=business_user_id).count()
-        return Response({"order_count": count}, status=status.HTTP_200_OK)
+        count = Order.objects.filter(
+            business_user=business_user_id, status="in_progress").count()
+        return Response({"order_count": int(count)}, status=status.HTTP_200_OK)
 
 
 class CompletedOrderCountView(APIView):
@@ -99,14 +102,10 @@ class CompletedOrderCountView(APIView):
         try:
             user = UserProfile.objects.get(user_id=business_user_id)
         except UserProfile.DoesNotExist:
-            return Response(
-                "The user does not exist", status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": "Der Benutzer existiert nicht"}, status=status.HTTP_404_NOT_FOUND)
 
         if user.type != "business":
-            return Response(
-                "Only business user can count their orders", status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"detail": "Nur Geschäftsnutzer können ihre Bestellungen zählen."}, status=status.HTTP_403_FORBIDDEN)
 
         completed_order_count = Order.objects.filter(
             business_user=business_user_id, status="completed"

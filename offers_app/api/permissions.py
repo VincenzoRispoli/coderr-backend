@@ -13,8 +13,9 @@ class IsBusinessUserOrReadOnlyOffers(BasePermission):
     """
 
     def has_permission(self, request, view):
-        if request.method in SAFE_METHODS:
-            return True
+
+        if not request.user.is_authenticated:
+            return False
 
         try:
             user_profile = UserProfile.objects.get(user_id=request.user.id)
@@ -22,8 +23,8 @@ class IsBusinessUserOrReadOnlyOffers(BasePermission):
             return False
 
         if request.method == 'POST':
-            business_user_profile = user_profile and user_profile.type == "business"
-            return request.user.is_authenticated and business_user_profile
+            business_user_profile = user_profile.type == "business"
+            return business_user_profile
 
         return True
 
@@ -53,20 +54,19 @@ class IsOwnerForPatchDeleteOrReadOnlyOffers(BasePermission):
         Returns:
             bool: True if permission is granted, otherwise False.
         """
-        # Allow safe (read-only) methods for all users
-        if request.method in SAFE_METHODS:
-            return True
 
-        # Allow POST requests for all users
-        if request.method == 'POST':
-            return True
+        if not request.user.is_authenticated:
+            return False
 
-        # Allow PUT, PATCH, and DELETE only for the owner, superuser, or guest business user
-        if request.method in ('PUT', 'PATCH', 'DELETE'):
-            is_superuser = request.user.is_superuser
-            is_business_guest = request.user.username == "GuestBusiness"
-            is_owner = request.user == obj.user
-            return is_owner or is_superuser or is_business_guest
 
-        # Deny all other methods
+        is_superuser = request.user.is_superuser
+        is_owner = request.user == obj.user
+
+        # Allow PUT, PATCH, and DELETE only for the owner or superuser
+        if request.method in ('PUT', 'PATCH'):
+            return is_owner
+
+        if request.method == "DELETE":
+            return is_owner or is_superuser
+
         return False

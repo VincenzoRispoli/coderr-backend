@@ -4,12 +4,15 @@ from orders_app.models import Order
 from offers_app.models import OfferDetails
 from profile_app.models import UserProfile
 from offers_app.api.serializers import OfferDetailsSerializer
+from .functions import create_new_order
 
 
 class OrderListSerializer(serializers.ModelSerializer):
     """
-    Serializer for Order model used in listing orders.
-    All fields are read-only except for those explicitly settable elsewhere.
+    Serializer for listing order data.
+
+    Provides a read-only representation of orders, including
+    pricing and related user information.
     """
     price = serializers.FloatField(read_only=True)
 
@@ -20,7 +23,6 @@ class OrderListSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             "id",
-            "offer_detail_id",
             "customer_user",
             "business_user",
             "title",
@@ -33,19 +35,20 @@ class OrderListSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = (
+        read_only_fields = [
+            "id",
             "customer_user",
             "business_user",
-            "offer_detail",
             "title",
             "revisions",
             "delivery_time_in_days",
             "price",
             "features",
             "offer_type",
+            "status",
             "created_at",
-            "updated_at",
-        )
+            "updated_at"
+        ]
 
 
 class OrderCreateSerializer(OrderListSerializer):
@@ -85,11 +88,11 @@ class OrderCreateSerializer(OrderListSerializer):
         """
         request = self.context.get('request')
         customer_user = request.user if request else None
+        attrs['customer_user'] = customer_user
         offer_detail = attrs.get('offer_detail')
         if Order.objects.filter(customer_user=customer_user, offer_detail=offer_detail).exists():
             raise serializers.ValidationError(
-                "You have already ordered this product"
-            )
+                {"detail": "Du hast dieses Produkt schon bestellt"})
 
         return attrs
 
@@ -99,32 +102,22 @@ class OrderCreateSerializer(OrderListSerializer):
         Automatically assigns customer, business user, and copies offer info.
         """
         offer_detail = validated_data.get('offer_detail')
-        return Order.objects.create(
-            business_user=offer_detail.offer.user,
-            customer_user=validated_data['customer_user'],
-            offer_detail=offer_detail,
-            title=offer_detail.title,
-            revisions=offer_detail.revisions,
-            delivery_time_in_days=offer_detail.delivery_time_in_days,
-            price=offer_detail.price,
-            features=offer_detail.features,
-            offer_type=offer_detail.offer_type,
-        )
+        new_order = create_new_order(offer_detail, validated_data)
+        return new_order
 
 
-class OrderUpdateSerializer(OrderListSerializer):
+class OrderUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating Order instances.
     Inherits all fields from OrderListSerializer and allows updating status.
     """
-    class Meta(OrderListSerializer.Meta):
+    class Meta:
         """
         Metadata configuration for the serializer.
         """
         model = Order
         fields = [
             "id",
-            "offer_detail_id",
             "customer_user",
             "business_user",
             "title",
@@ -137,3 +130,14 @@ class OrderUpdateSerializer(OrderListSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def validate_status(self, status):
+        allowed_status = {'in_progress', 'cancelled', 'completed'}
+        if not status:
+            raise serializers.ValidationError(
+                {"status": "Status ist erforderlich"})
+        if not status in allowed_status:
+            raise serializers.ValidationError(
+                {"status": "Zulässige Werte sind: in_progress, cancelled or completed"})
+
+        return status

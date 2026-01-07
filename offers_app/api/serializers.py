@@ -1,3 +1,4 @@
+from .functions import validate_details_function, create_offer_instance
 from offers_app.models import Offer, OfferDetails
 from rest_framework import serializers
 
@@ -75,15 +76,18 @@ class OfferSerializer(serializers.ModelSerializer):
             "details",
         ]
 
-    def validate_title(self, value):
-        """
-        Validate that the offer title is at least 3 characters long.
-        """
-        if value is None or len(value) < 3:
+    def validate_title(self, title):
+        if title is not None and len(title) < 3:
             raise serializers.ValidationError(
-                "Der Titel des Angebots muss mindestens 3 Zeichen lang sein"
-            )
-        return value
+                {"error": "Der Titel des Angebots muss mindestens 3 Zeichen lang sein"})
+        return title
+
+    def validate_details(self, details):
+        if details is not None:
+            allowed_types = {"basic", "standard", "premium"}
+            validate_details_function(details, allowed_types)
+
+        return details
 
     def create(self, validated_data):
         """
@@ -103,21 +107,23 @@ class OfferSerializer(serializers.ModelSerializer):
         """
         details_data = validated_data.pop('details', [])
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-
-        details = instance.details.all()
-        for detail_instance, single_detail_data in zip(details, details_data):
-            offer_detail_serializer = OfferDetailsSerializer(
-                detail_instance,
-                data=single_detail_data,
-                partial=True,
-            )
-            if offer_detail_serializer.is_valid():
-                offer_detail_serializer.save()
+        create_offer_instance(instance, validated_data)
+        self.add_details_to_offer_instance(details_data)
 
         return instance
+
+    def add_details_to_offer_instance(self, details_data):
+        for single_detail in details_data:
+            offer_type = single_detail.get('offer_type')
+            detail_instance = OfferDetails.objects.get(
+                offer=self.instance, offer_type=offer_type)
+            serializer = OfferDetailsSerializer(
+                detail_instance,
+                data=single_detail,
+                partial=True
+            )
+            if serializer.is_valid():
+                serializer.save()
 
 
 class OfferUrlSerializer(serializers.ModelSerializer):

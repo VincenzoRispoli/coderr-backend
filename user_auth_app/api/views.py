@@ -81,6 +81,7 @@ class CustomLoginView(ObtainAuthToken):
             }
             return Response(data, status=status.HTTP_400_BAD_REQUEST)
         return Response(data, status=status.HTTP_201_CREATED)
+    
 
     def process_guest_customer_reg_or_login(self, username, request):
         """Handle registration or login for a guest customer user."""
@@ -89,6 +90,7 @@ class CustomLoginView(ObtainAuthToken):
             return Response(data, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return self.register_user(request)
+    
 
     def process_guest_business_reg_or_login(self, username, request):
         """Handle registration or login for a guest business user."""
@@ -105,6 +107,7 @@ class CustomLoginView(ObtainAuthToken):
         data = guest_user_data_dict(
             token, guest_customer_user)
         return data
+    
 
     def get_guest_business_user_data(self, username):
         """Return data dict for an existing guest business user."""
