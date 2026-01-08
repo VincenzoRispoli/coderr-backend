@@ -4,6 +4,64 @@ from rest_framework import status, serializers
 from offers_app.models import OfferDetails
 
 
+def check_parameters(query_params):
+    print(query_params)
+    pass
+
+
+def filter_with_creator_id_param(queryset, creator_id):
+    """
+    Filter the queryset by creator ID.
+
+    Validates the `creator_id` and filters the queryset
+    to include only offers created by that user.
+    """
+    validated_creator_id = creator_id_validation(creator_id)
+    queryset = queryset.filter(user=validated_creator_id)
+    return queryset
+
+
+def filter_with_min_delivery_time_param(queryset, min_delivery_time):
+    """
+    Filter the queryset by minimum delivery time.
+
+    Validates `min_delivery_time` and filters the queryset
+    to include offers with `min_delivery_time` less than or equal to the value.
+    """
+    validated_min_delivery_time = min_dev_time_validation(min_delivery_time)
+    queryset = queryset.filter(
+        min_delivery_time__lte=validated_min_delivery_time)
+    return queryset
+
+
+def filter_with_min_price_param(queryset, min_price):
+    """
+    Filter the queryset by minimum price.
+
+    Validates `min_price` and filters the queryset
+    to include offers matching the specified minimum price.
+    """
+    validated_min_price = min_price_validation(min_price)
+    queryset = queryset.filter(min_price=validated_min_price)
+    return queryset
+
+
+def creator_id_validation(creator_id):
+    """
+    Validate that `creator_id` is a positive integer (> 0).
+
+    Raises ValidationError if the value is invalid.
+    """
+    try:
+        creator_id = int(creator_id)
+        if creator_id <= 0:
+            raise ValueError()
+        return creator_id
+    except ValueError:
+        raise ValidationError(
+            {"creator_id": "Muss eine integer number sein und größer als 0 sein"})
+
+
 def min_dev_time_validation(min_delivery_time):
     """
     Validate that the minimum delivery time is a positive integer.
@@ -21,13 +79,29 @@ def min_dev_time_validation(min_delivery_time):
         min_delivery_time = int(min_delivery_time)
         if min_delivery_time <= 0:
             raise ValueError()
+        return min_delivery_time
     except ValueError:
         raise ValidationError(
-            {"max_delivery_time": "Must be an integer number or greater than 0"})
-    return min_delivery_time
+            {"max_delivery_time": "Muss eine integer number und größer als 0 sein"})
 
 
-def validate_details_function(details, allowed_types):
+def min_price_validation(min_price):
+    """
+    Ensure `min_price` is a positive number and return it as a float.
+
+    Raises ValidationError if the value is invalid.
+    """
+    try:
+        min_price = float(min_price)
+        if min_price <= 0:
+            raise ValueError()
+        return min_price
+    except ValueError:
+        raise ValidationError(
+            {"min_price": "Der mindeste Preis muss eine float / integer number und größer als 0 sein"})
+
+
+def validate_details_function(details, allowed_types, request):
     """
     Validate offer details list and allowed offer types.
 
@@ -37,9 +111,14 @@ def validate_details_function(details, allowed_types):
     Raises:
         serializers.ValidationError: If validation fails.
     """
-    if len(details) != 3:
-        raise serializers.ValidationError(
-            {"details": "Ein Offer muss 3 Details enthalten"})
+    if request.method == "POST":
+        if not details or len(details) != 3:
+            raise serializers.ValidationError(
+                {"details": "Ein Offer muss 3 Details enthalten"})
+    elif request.method == "PATCH":
+        if details is not None and len(details) > 3:
+            raise serializers.ValidationError(
+                {"details": "Die Angebotsdetails dürfen maximal 3 sein"})
 
     types = []
     for index, detail in enumerate(details):

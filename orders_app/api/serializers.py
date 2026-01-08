@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from rest_framework.exceptions import NotFound
 from orders_app.models import Order
 from offers_app.models import OfferDetails
 from profile_app.models import UserProfile
@@ -56,11 +57,8 @@ class OrderCreateSerializer(OrderListSerializer):
     Serializer for creating new Order instances.
     Extends OrderListSerializer and adds validation for duplicate orders.
     """
-    offer_detail_id = serializers.PrimaryKeyRelatedField(
-        queryset=OfferDetails.objects.all(),
-        write_only=True,
-        source="offer_detail"
-    )
+    offer_detail_id = serializers.IntegerField(
+        write_only=True, required=False)
 
     class Meta(OrderListSerializer.Meta):
         """
@@ -84,16 +82,32 @@ class OrderCreateSerializer(OrderListSerializer):
 
     def validate(self, attrs):
         """
-        Ensure that the customer has not already ordered the same offer.
+        Validate offer_detail_id: ensure it is provided, exists, 
+        and not already ordered by the customer. 
+        Adds 'offer_detail' and 'customer_user' to attrs.
+
+        Raises:
+            ValidationError: missing or duplicate order.
+            NotFound: offer_detail does not exist.
         """
         request = self.context.get('request')
         customer_user = request.user if request else None
-        attrs['customer_user'] = customer_user
-        offer_detail = attrs.get('offer_detail')
+        offer_detail_id = attrs.get('offer_detail_id')
+        if not offer_detail_id:
+            raise serializers.ValidationError(
+                {"offer_detail_id": "Die ID des Angebotsdetails ist für die erstellung einer Bestellung erförderlich"})
+
+        try:
+            offer_detail = OfferDetails.objects.get(pk=offer_detail_id)
+        except OfferDetails.DoesNotExist:
+            raise NotFound(
+                {"offer_detail_id": "Der gesuchte Angebotsdetail existiert nicht"})
+
         if Order.objects.filter(customer_user=customer_user, offer_detail=offer_detail).exists():
             raise serializers.ValidationError(
-                {"detail": "Du hast dieses Produkt schon bestellt"})
-
+                {"detail": "Du hast dieses Produkt bereits bestellt"})
+        attrs['offer_detail'] = offer_detail
+        attrs['customer_user'] = customer_user
         return attrs
 
     def create(self, validated_data):

@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from .pagination import OfferPagination
 from .permissions import IsBusinessUserOrReadOnlyOffers, IsOwnerForPatchDeleteOrReadOnlyOffers
-from .functions import min_dev_time_validation
+from .functions import filter_with_min_delivery_time_param, filter_with_creator_id_param, filter_with_min_price_param, check_parameters
 
 
 class OfferViewSet(viewsets.ModelViewSet):
@@ -49,15 +49,19 @@ class OfferViewSet(viewsets.ModelViewSet):
         """
         queryset = Offer.objects.all()
         creator_id = self.request.query_params.get('creator_id')
-        if creator_id:
-            queryset = queryset.filter(user=creator_id)
-
         min_delivery_time = self.request.query_params.get('max_delivery_time')
+        min_price = self.request.query_params.get('min_price')
+
+        if creator_id:
+            queryset = filter_with_creator_id_param(queryset, creator_id)
+
         if min_delivery_time:
-            min_delivery_time = min_dev_time_validation(min_delivery_time)
-            queryset = queryset.filter(
-                min_delivery_time__lte=min_delivery_time
-            )
+            queryset = filter_with_min_delivery_time_param(
+                queryset, min_delivery_time)
+
+        if min_price:
+            queryset = filter_with_min_price_param(queryset, min_price)
+
         return queryset
 
     def perform_create(self, serializer):

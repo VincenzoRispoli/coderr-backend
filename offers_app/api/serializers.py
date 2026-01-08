@@ -83,9 +83,9 @@ class OfferSerializer(serializers.ModelSerializer):
         return title
 
     def validate_details(self, details):
-        if details is not None:
-            allowed_types = {"basic", "standard", "premium"}
-            validate_details_function(details, allowed_types)
+        request = self.context.get('request')
+        allowed_types = {"basic", "standard", "premium"}
+        validate_details_function(details, allowed_types, request)
 
         return details
 
