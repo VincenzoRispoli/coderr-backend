@@ -1,38 +1,31 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 from rest_framework.exceptions import PermissionDenied, NotAuthenticated
 from profile_app.models import UserProfile
+from reviews_app.models import Review
 
 
 class IsCustomerUserForPostReviewsOrReadOnly(BasePermission):
     """
-    Custom permission to allow only customer users to create reviews.
-    Read-only requests are allowed for all authenticated users.
+    Allow read-only access to all users.
+    Allow POST only if the user has a 'customer' UserProfile.
     """
 
     def has_permission(self, request, view):
-        """
-        Check if the request has the proper permissions:
-        - Safe methods (GET, HEAD, OPTIONS) are allowed for anyone.
-        - POST requests require the user to be a customer.
-        - Raises exceptions if user is unauthenticated or has no profile.
-        """
+
         if request.method in SAFE_METHODS:
             return True
-
-        if not request.user or not request.user.is_authenticated:
-            raise NotAuthenticated("Der Benutzer muss authentifiziert sein.")
 
         try:
             user_profile = UserProfile.objects.get(user_id=request.user.id)
         except UserProfile.DoesNotExist:
             raise PermissionDenied("Der Benutzer besitzt kein Benutzerprofil.")
 
-        if request.method == "POST" and user_profile.type != "customer":
-            raise PermissionDenied(
-                "Nur Benutzer mit Kundenprofil dürfen Bewertungen erstellen."
-            )
-
-        return True
+        if request.method == "POST":
+            if user_profile.type != "customer":
+                raise PermissionDenied(
+                    "Nur Benutzer mit Kundenprofil dürfen Bewertungen erstellen."
+                )
+            return True
 
 
 class IsReviewOwnerForPatchDelete(BasePermission):

@@ -77,7 +77,7 @@ class OrderCreateSerializer(OrderListSerializer):
             "features",
             "offer_type",
             "status",
-            "created_at",
+            "created_at"
         ]
 
     def validate(self, attrs):
@@ -122,12 +122,20 @@ class OrderCreateSerializer(OrderListSerializer):
 
 class OrderUpdateSerializer(serializers.ModelSerializer):
     """
-    Serializer for updating Order instances.
-    Inherits all fields from OrderListSerializer and allows updating status.
+    Serializer used to update an Order instance.
+
+    All fields are included for representation purposes, but only the
+    `status` field is writable. This prevents clients from modifying
+    sensitive data such as price, users, or offer details, ensuring
+    data integrity and avoiding fraudulent updates.
     """
     class Meta:
         """
-        Metadata configuration for the serializer.
+        Meta configuration for OrderUpdateSerializer.
+
+        - `fields` defines all fields that will be serialized in responses.
+        - `read_only_fields` restricts write access to all fields except `status`,
+          which is the only field allowed to be updated via the API.
         """
         model = Order
         fields = [
@@ -145,8 +153,12 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def validate_status(self, status):
+    def validate(self, attrs):
+        allowed_keys = {"status"}
+        status = attrs.get('status')
         allowed_status = {'in_progress', 'cancelled', 'completed'}
+        if attrs and set(attrs.keys()) != allowed_keys:
+            raise serializers.ValidationError({"detail": "Ungültiger Status oder unzulässige Felder in der Anfrage"})
         if not status:
             raise serializers.ValidationError(
                 {"status": "Status ist erforderlich"})
@@ -154,4 +166,4 @@ class OrderUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"status": "Zulässige Werte sind: in_progress, cancelled or completed"})
 
-        return status
+        return attrs

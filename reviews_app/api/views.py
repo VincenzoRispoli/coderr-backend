@@ -1,14 +1,8 @@
-from django.forms import ValidationError
-from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, status
-from profile_app.models import UserProfile
-from django.contrib.auth.models import User
 from reviews_app.models import Review
-from .serializers import ReviewsListCreateSerializer, ReviewRetrieveUpdateDestroySerializer
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from .serializers import ReviewCreateSerializer, ReviewListSerializer, ReviewRetrieveUpdateDestroySerializer
 from rest_framework import filters, generics, permissions
 from .permissions import IsCustomerUserForPostReviewsOrReadOnly, IsReviewOwnerForPatchDelete
+from .functions import filter_reviews_queryset_with_business_user_param, filter_reviews_queryset_with_reviewer_param
 
 
 class ReviewsView(generics.ListCreateAPIView):
@@ -19,8 +13,8 @@ class ReviewsView(generics.ListCreateAPIView):
     - List reviews with optional filtering by business user or reviewer.
     - Create new reviews by authenticated customer users.
     """
-    serializer_class = ReviewsListCreateSerializer
-    permission_classes = [IsCustomerUserForPostReviewsOrReadOnly,permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated,
+                          IsCustomerUserForPostReviewsOrReadOnly]
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['updated_at', 'rating']
     lookup_field = "pk"
@@ -41,14 +35,22 @@ class ReviewsView(generics.ListCreateAPIView):
         reviewer_param = self.request.query_params.get('reviewer_id')
 
         if business_user_param:
-            queryset = queryset.filter(business_user=business_user_param)
+            queryset = filter_reviews_queryset_with_business_user_param(
+                queryset, business_user_param)
 
         if reviewer_param:
-            queryset = queryset.filter(reviewer=reviewer_param)
+            queryset = filter_reviews_queryset_with_reviewer_param(
+                queryset, reviewer_param)
 
         return queryset
 
-    
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return ReviewCreateSerializer
+        if self.request.method in ["GET", "PUT", "PATCH", "DELETE"]:
+            return ReviewRetrieveUpdateDestroySerializer
+        return ReviewListSerializer
+
     def perform_create(self, serializer):
         reviewer = self.request.user
         serializer.save(reviewer=reviewer)

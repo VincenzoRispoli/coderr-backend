@@ -5,22 +5,17 @@ from rest_framework import serializers
 from profile_app.api.serializers import UserProfileSerializer
 
 
-class ReviewsListCreateSerializer(serializers.ModelSerializer):
+class BaseReviewSerializer(serializers.ModelSerializer):
     """
-    Serializer for creating and listing Review instances.
+    Base serializer for Review objects.
 
-    Handles:
-    - Automatic assignment of the reviewer (read-only)
-    - Writable assignment of the business_user
-    - Validation to prevent duplicate reviews by the same reviewer for the same business
+    Includes shared fields and prevents duplicate reviews
+    by the same user for the same business user.
     """
-    business_user = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all())
-    reviewer = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         """
-        Meta configuration for the serializer.
+        Serializer metadata for the Review model.
         """
         model = Review
         fields = [
@@ -35,21 +30,107 @@ class ReviewsListCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """
-        Ensure that a reviewer cannot create multiple reviews for the same business user.
+        Validate that a user can review a business user only once.
+
+        Args:
+            data: Validated serializer data.
+
+        Returns:
+            dict: The validated data.
 
         Raises:
-            serializers.ValidationError: If a review by the same reviewer already exists.
+            serializers.ValidationError: If a duplicate review exists.
         """
-        request = self.context['request']
-        reviewer = request.user
+        reviewer = self.context['request'].user
         business_user = data.get('business_user')
 
-        if Review.objects.filter(reviewer=reviewer, business_user=business_user).exists():
+        if business_user and Review.objects.filter(
+            business_user=business_user,
+            reviewer=reviewer
+        ).exists():
             raise serializers.ValidationError(
-                "Du hast diesen Geschäftnutzer shon bewertet"
+                {"detail": "Du hast schon diese Geschäftnutzer bewertet"}
             )
 
         return data
+
+
+class ReviewListSerializer(BaseReviewSerializer):
+    """
+    Serializer for listing Review objects.
+
+    Overrides user-related fields to return primary keys.
+    """
+
+    business_user = serializers.PrimaryKeyRelatedField(
+        queryset=UserProfile.objects.all())
+    reviewer = serializers.PrimaryKeyRelatedField(
+        queryset=UserProfile.objects.all())
+
+
+class ReviewCreateSerializer(BaseReviewSerializer):
+    """
+    Serializer for creating Review objects.
+
+    Applies custom validation rules and assigns the reviewer
+    from the authenticated request user.
+    """
+
+    business_user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), required=True, error_messages={
+            "required": "Der Geschäftsnutzer ist erforderlich.",
+            "null": "Der Geschäftsnutzer darf nicht leer sein.",
+            "does_not_exist": "Dieser Geschäftsnutzer existiert nicht.",
+            "incorrect_type": "Ungültiger Geschäftsnutzer."
+        })
+    reviewer = serializers.PrimaryKeyRelatedField(read_only=True)
+    rating = serializers.IntegerField(
+        min_value=1,
+        max_value=5,
+        required=True,
+        allow_null=False,
+        error_messages={
+            "required": "Die Bewertung ist erforderlich.",
+            "null": "Die Bewertung darf nicht leer sein.",
+            "invalid": "Die Bewertung muss eine Zahl sein.",
+            "min_value": "Die Bewertung muss mindestens 1 Stern sein.",
+            "max_value": "Die Bewertung darf höchstens 5 Sterne sein.",
+        })
+    description = serializers.CharField(
+        allow_null=False,
+        allow_blank=False,
+        max_length=500,
+        error_messages={
+            "null": "Die Becshreibung darf nicht leer sein.",
+            "blank": "Die Becshreibung darf nicht leer sein.",
+            "max_length": "Die Beschreibung darf höchstens 500 Zeichen enthalten."
+        })
+
+    def validate(self, attrs):
+        """
+        Prevent duplicate reviews by the same user
+        for the same business user.
+        """
+        business_user = attrs.get('business_user')
+        reviewer = self.context['request'].user
+        if Review.objects.filter(
+            business_user=business_user,
+            reviewer=reviewer
+        ).exists():
+            raise serializers.ValidationError(
+                {"detail": "Du hast diesen Geschäftsnutzer bereits bewertet"}
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        """
+        Create a Review instance and assign the reviewer
+        from the request context.
+        """
+        reviewer = self.context['request'].user
+        validated_data['reviewer'] = reviewer
+        return Review.objects.create(**validated_data)
 
 
 class ReviewRetrieveUpdateDestroySerializer(serializers.ModelSerializer):
@@ -57,6 +138,27 @@ class ReviewRetrieveUpdateDestroySerializer(serializers.ModelSerializer):
     Serializer for retrieving, updating, or deleting a Review instance.
     Validates that a rating and description are provided for updates.
     """
+
+    rating = serializers.IntegerField(
+        min_value=1,
+        max_value=5,
+        required=False,
+        allow_null=False,
+        error_messages={
+            "null": "Die Bewertung darf nicht leer sein.",
+            "invalid": "Die Bewertung muss eine Zahl sein.",
+            "min_value": "Die Bewertung muss mindestens 1 Stern sein.",
+            "max_value": "Die Bewertung darf höchstens 5 Sterne sein.",
+        })
+    description = serializers.CharField(
+        allow_null=False,
+        allow_blank=False,
+        max_length=500,
+        error_messages={
+            "null": "Die Becshreibung darf nicht leer sein.",
+            "blank": "Die Becshreibung darf nicht leer sein.",
+            "max_length": "Die Beschreibung darf höchstens 500 Zeichen enthalten."
+        })
 
     class Meta:
         """
@@ -72,29 +174,3 @@ class ReviewRetrieveUpdateDestroySerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
-
-    def validate(self, data):
-        """
-        Ensure that both rating and description are present when updating a review.
-
-        Raises:
-            serializers.ValidationError: If rating or description is missing.
-        """
-        rating = data.get('rating')
-        description = data.get('description')
-        errors = []
-
-        if not rating:
-            errors.append(
-                "Eine Rezension kann nicht ohne Sternebewertung aktualisiert werden."
-            )
-
-        if not description:
-            errors.append(
-                "Eine Rezension kann nicht ohne Beschreibung aktualisiert werden."
-            )
-
-        if errors:
-            raise serializers.ValidationError(errors)
-
-        return data

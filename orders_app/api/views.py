@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from orders_app.models import Order
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
-from .permissions import IsCustomerUserForPostOrReadOnlyOrders, IsBusinessUserForUpdateOrder
+from .permissions import IsCustomerUserForPostOrReadOnlyOrders, IsBusinessUserForUpdateOrder, IsAdminOrStaffUserForDeleteOrder
 
 
 class OrdersViewSet(viewsets.ModelViewSet):
@@ -18,19 +18,22 @@ class OrdersViewSet(viewsets.ModelViewSet):
     Supports CRUD operations with permissions based on user role.
     """
     permission_classes = [
+        IsAuthenticated,
         IsCustomerUserForPostOrReadOnlyOrders,
         IsBusinessUserForUpdateOrder,
-        IsAuthenticated
+        IsAdminOrStaffUserForDeleteOrder,
     ]
 
     def get_queryset(self):
         """
         Return orders related to the current user, either as customer or business user.
         """
-        queryset = Order.objects.all()
         current_user = self.request.user
-        if current_user:
-            queryset = queryset.filter(
+        if current_user.is_superuser or current_user.is_staff:
+           queryset = Order.objects.all()
+        
+        elif current_user:
+            queryset = Order.objects.filter(
                 Q(customer_user=current_user) | Q(business_user=current_user)
             )
         return queryset
@@ -54,7 +57,6 @@ class OrdersViewSet(viewsets.ModelViewSet):
         if self.action == "create":
             return OrderCreateSerializer
         if self.action in ["update", "partial_update"]:
-            print("Order update gerufen")
             return OrderUpdateSerializer
         return OrderListSerializer
 
@@ -74,7 +76,7 @@ class OrderCountView(APIView):
         try:
             user = UserProfile.objects.get(user_id=business_user_id)
         except UserProfile.DoesNotExist:
-            return Response({"detail": "Der Benutzer existiert nicht"}, status=status.HTTP_404_NOT_FOUND
+            return Response({"detail": "Kein Benutzer mit dieser ID gefunden"}, status=status.HTTP_404_NOT_FOUND
                             )
 
         if user.type != "business":
@@ -102,7 +104,7 @@ class CompletedOrderCountView(APIView):
         try:
             user = UserProfile.objects.get(user_id=business_user_id)
         except UserProfile.DoesNotExist:
-            return Response({"detail": "Der Benutzer existiert nicht"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Kein Benutzer mit dieser ID gefunden"}, status=status.HTTP_404_NOT_FOUND)
 
         if user.type != "business":
             return Response({"detail": "Nur Geschäftsnutzer können ihre Bestellungen zählen."}, status=status.HTTP_403_FORBIDDEN)

@@ -1,6 +1,12 @@
 from orders_app.models import Order
 
 def create_new_order(offer_detail, validated_data):
+    """
+    Create a new Order instance from an offer detail and validated data.
+
+    Copies relevant fields from the offer detail and assigns
+    the customer user from the validated input.
+    """
     return Order.objects.create(
         business_user=offer_detail.offer.user,
         customer_user=validated_data['customer_user'],

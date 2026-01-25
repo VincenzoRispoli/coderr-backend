@@ -26,6 +26,9 @@ class IsCustomerUserForPostOrReadOnlyOrders(BasePermission):
             bool: True if the user is allowed to perform the request; 
                   otherwise, False.
         """
+
+        if request.user.is_superuser or request.user.is_staff:
+            return True
         # Allow safe (read-only) methods for all users
         if request.method in SAFE_METHODS:
             return True
@@ -42,8 +45,7 @@ class IsCustomerUserForPostOrReadOnlyOrders(BasePermission):
             customer_profile = user_profile and user_profile.type == 'customer'
             return request.user.is_authenticated and customer_profile
 
-        # Allow other methods only if the user is authenticated
-        return request.user.is_authenticated
+        return True
 
 
 class IsBusinessUserForUpdateOrder(BasePermission):
@@ -73,12 +75,10 @@ class IsBusinessUserForUpdateOrder(BasePermission):
         Returns:
             bool: True if the user has permission for the operation; otherwise, False.
         """
-        # Allow safe (read-only) methods for all users
-        if request.method in SAFE_METHODS:
+        if request.user.is_superuser or request.user.is_staff:
             return True
 
-        # Allow POST requests for all users
-        if request.method == 'POST':
+        if request.method in SAFE_METHODS or request.method == 'POST':
             return True
 
         # Attempt to retrieve the user's profile
@@ -88,12 +88,23 @@ class IsBusinessUserForUpdateOrder(BasePermission):
             # Deny permission if the user has no profile
             return False
 
-        # Allow PUT, PATCH, and DELETE only for business users
+        # Allow PUT, PATCH only for business users
         # who own the order and are authenticated
-        if request.method in ('PUT', 'PATCH', 'DELETE'):
+        if request.method in ('PUT', 'PATCH'):
             business_user = user_profile and user_profile.type == "business"
             is_owner_of_the_order = request.user == obj.business_user and business_user
             return request.user.is_authenticated and is_owner_of_the_order and business_user
 
-        # Deny all other methods
-        return False
+        return True
+
+
+class IsAdminOrStaffUserForDeleteOrder(BasePermission):
+    """
+    Custom permission: only allow admin/superuser or staff to delete an Order.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        if request.method == "DELETE":
+            is_admin_or_staff = request.user.is_superuser or request.user.is_staff
+            return is_admin_or_staff
+        return True
