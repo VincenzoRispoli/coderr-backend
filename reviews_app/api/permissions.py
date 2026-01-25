@@ -1,7 +1,6 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
-from rest_framework.exceptions import PermissionDenied, NotAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from profile_app.models import UserProfile
-from reviews_app.models import Review
 
 
 class IsCustomerUserForPostReviewsOrReadOnly(BasePermission):

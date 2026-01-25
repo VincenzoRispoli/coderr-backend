@@ -1,5 +1,3 @@
-from profile_app.api.serializers import UserProfileSerializer
-from profile_app.models import UserProfile
 from .serializers import UserRegistrationSerializer
 from .functions import fill_user_data_dict, guest_user_data_dict
 from rest_framework import status

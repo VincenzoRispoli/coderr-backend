@@ -1,5 +1,4 @@
-from django.urls import path, include
-from rest_framework import routers
+from django.urls import path
 from .views import ReviewsView, ReviewsDetailView
 
 """URL configuration for Review-related API endpoints.

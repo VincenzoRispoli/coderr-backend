@@ -1,4 +1,3 @@
-from django.forms import ValidationError
 from rest_framework.views import APIView
 from offers_app.models import Offer, OfferDetails
 from .serializers import OfferSerializer, OfferDetailsSerializer, OfferListSerializer, OfferRetrieveSerializer
@@ -7,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from .pagination import OfferPagination
 from .permissions import IsBusinessUserOrReadOnlyOffers, IsOwnerForPatchDeleteOrReadOnlyOffers
-from .functions import filter_with_min_delivery_time_param, filter_with_creator_id_param, filter_with_min_price_param, check_parameters
+from .functions import filter_with_min_delivery_time_param, filter_with_creator_id_param, filter_with_min_price_param
 
 
 class OfferViewSet(viewsets.ModelViewSet):

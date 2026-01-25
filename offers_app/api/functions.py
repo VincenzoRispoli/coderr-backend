@@ -1,12 +1,5 @@
 from rest_framework.exceptions import ValidationError
-from rest_framework.response import Response
 from rest_framework import status, serializers
-from offers_app.models import OfferDetails
-
-
-def check_parameters(query_params):
-    print(query_params)
-    pass
 
 
 def filter_with_creator_id_param(queryset, creator_id):

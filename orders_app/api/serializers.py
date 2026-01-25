@@ -1,10 +1,7 @@
-from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
 from orders_app.models import Order
 from offers_app.models import OfferDetails
-from profile_app.models import UserProfile
-from offers_app.api.serializers import OfferDetailsSerializer
 from .functions import create_new_order
 
 

@@ -1,6 +1,5 @@
 from django.urls import path, include
 from .views import BusinessProfilesListView, CustomerProfilesListView, ProfileView
-from rest_framework import routers
 
 """URL configuration for UserProfile-related API endpoints.
 

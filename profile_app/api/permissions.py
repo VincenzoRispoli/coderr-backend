@@ -1,5 +1,4 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
-from profile_app.models import UserProfile
 
 
 class IsOwnerForPatchDeleteOrReadOnlyProfiles(BasePermission):

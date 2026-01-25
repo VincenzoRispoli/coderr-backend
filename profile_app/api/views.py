@@ -1,9 +1,6 @@
 
 from .serializers import UserProfileSerializer, BusinessUserProfileSerializer,  CustomerUserProfileSerializer
 from rest_framework.response import Response
-from rest_framework import viewsets
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework import generics
 from profile_app.models import UserProfile
