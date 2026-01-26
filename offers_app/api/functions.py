@@ -35,7 +35,7 @@ def filter_with_min_price_param(queryset, min_price):
     to include offers matching the specified minimum price.
     """
     validated_min_price = min_price_validation(min_price)
-    queryset = queryset.filter(min_price=validated_min_price)
+    queryset = queryset.filter(min_price__gte=validated_min_price)
     return queryset
 
 

@@ -1,18 +1,27 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 from profile_app.models import UserProfile
 
 
 class IsBusinessUserOrReadOnlyOffers(BasePermission):
-    """Custom permission to allow only business users to create offers.
+    """
+    Permission class to control access to Offer creation and read-only operations.
 
-    Read-only methods (GET, HEAD, OPTIONS) are allowed for any user.
-    For write operations:
-        - The user must be authenticated.
-        - The user must have a related UserProfile.
-        - The UserProfile must be of type "business".
+    Rules:
+    - SAFE_METHODS (GET, HEAD, OPTIONS) are allowed for any user.
+    - All other methods require the user to be authenticated.
+    - POST requests are allowed only if the authenticated user has a related
+      UserProfile of type "business".
+    - Any other non-safe write requests are denied.
     """
 
     def has_permission(self, request, view):
+        """
+        Determine if the requesting user has permission to access the view
+        based on the HTTP method and the user's profile.
+        """
+
+        if request.method in SAFE_METHODS:
+            return True
 
         if not request.user.is_authenticated:
             return False
@@ -26,43 +35,33 @@ class IsBusinessUserOrReadOnlyOffers(BasePermission):
             business_user_profile = user_profile.type == "business"
             return business_user_profile
 
-        return True
+        return False
 
 
 class IsOwnerForPatchDeleteOrReadOnlyOffers(BasePermission):
     """
-    Custom permission class for Offers objects.
+    Object-level permission for Offer instances.
 
-    This permission allows:
-    - Read-only access (SAFE_METHODS) for all users.
-    - POST requests for all users.
-    - PUT, PATCH, and DELETE requests only if the user is:
-        * The owner of the object,
-        * A superuser, or
-        * The special user with username "GuestBusiness".
+    - Requires the user to be authenticated.
+    - PUT and PATCH requests are allowed only for the owner of the Offer.
+    - DELETE requests are allowed for the owner or a superuser.
+    - All other methods are denied at the object level.
     """
+
+    def has_permission(self, request, view):
+        """
+        Allow access only to authenticated users.
+        """
+        return request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
         """
-        Determine if the requesting user has permission for a specific object.
-
-        Parameters:
-            request: The HTTP request object.
-            view: The view that triggered this permission check.
-            obj: The object being accessed.
-
-        Returns:
-            bool: True if permission is granted, otherwise False.
+        Grant object-level access based on ownership and HTTP method.
         """
-
-        if not request.user.is_authenticated:
-            return False
-
 
         is_superuser = request.user.is_superuser
         is_owner = request.user == obj.user
 
-        # Allow PUT, PATCH, and DELETE only for the owner or superuser
         if request.method in ('PUT', 'PATCH'):
             return is_owner
 

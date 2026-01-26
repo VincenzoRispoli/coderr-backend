@@ -15,8 +15,6 @@ class OfferViewSet(viewsets.ModelViewSet):
     Supports CRUD operations with filtering, searching, ordering, and pagination.
     """
 
-    serializer_class = OfferSerializer
-    pagination_class = OfferPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description']
     ordering_fields = ['min_price', 'updated_at']
@@ -25,6 +23,8 @@ class OfferViewSet(viewsets.ModelViewSet):
         IsBusinessUserOrReadOnlyOffers,
         IsOwnerForPatchDeleteOrReadOnlyOffers
     ]
+    serializer_class = OfferSerializer
+    pagination_class = OfferPagination
     lookup_field = 'id'
 
     def get_permissions(self):
@@ -34,9 +34,11 @@ class OfferViewSet(viewsets.ModelViewSet):
         if self.action == "retrieve":
             permission_classes = [permissions.IsAuthenticated]
         if self.action == "create":
-            permission_classes = [IsBusinessUserOrReadOnlyOffers]
+            permission_classes = [permissions.IsAuthenticated,
+                                  IsBusinessUserOrReadOnlyOffers]
         if self.action in ['update', 'partial_update', 'destroy']:
-            permission_classes = [IsOwnerForPatchDeleteOrReadOnlyOffers]
+            permission_classes = [permissions.IsAuthenticated,
+                                  IsOwnerForPatchDeleteOrReadOnlyOffers]
 
         return [permission() for permission in permission_classes]
 
